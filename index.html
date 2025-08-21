@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark"> <!-- A classe 'dark' será adicionada aqui via JS -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos Moderno</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para o ícone de 'carregando' */
+        .loader {
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        .dark .loader {
+             border-top-color: #60a5fa;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Customizações para modo claro/escuro */
+        .bg-custom { background-color: #f0f2f5; }
+        .dark .bg-custom { background-color: #020617; }
+        .text-custom { color: #1e293b; }
+        .dark .text-custom { color: #e2e8f0; }
+        .card-bg { background-color: white; }
+        .dark .card-bg { background-color: #0f172a; }
+        .border-custom { border-color: #e2e8f0; }
+        .dark .border-custom { border-color: #1e293b; }
+        .input-bg { background-color: #f8fafc; }
+        .dark .input-bg { background-color: #334155; }
+        .nav-btn.active { color: #2563eb; }
+        .dark .nav-btn.active { color: #60a5fa; }
+        
+        /* Estilos para o Botão de Ação Flutuante (FAB) */
+        .fab-options {
+            transition: all 0.3s ease;
+        }
+        .filter-btn.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .dark .filter-btn.active {
+            background-color: #60a5fa;
+            color: #020617;
+        }
+    </style>
+</head>
+<body class="bg-custom text-custom antialiased transition-colors duration-300 pb-24">
+
+    <div class="container mx-auto max-w-2xl p-4 md:p-6">
+        
+        <!-- Cabeçalho -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 id="header-title" class="text-3xl font-extrabold text-slate-800 dark:text-white">Olá!</h1>
+                <p id="header-subtitle" class="text-slate-500 dark:text-slate-400">Aqui está o resumo das suas finanças.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="analyze-btn" class="p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors">
+                    <i data-lucide="bot" id="analyze-btn-icon"></i>
+                    <div id="analyze-loader" class="hidden loader" style="width: 24px; height: 24px;"></div>
+                </button>
+                <button id="theme-toggle" class="p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors">
+                    <i data-lucide="sun" id="theme-icon-light"></i>
+                    <i data-lucide="moon" id="theme-icon-dark" class="hidden"></i>
+                </button>
+            </div>
+        </header>
+
+        <main id="app-content">
+            <!-- As vistas (views) serão injetadas aqui pelo JS -->
+        </main>
+
+        <!-- Botão de Ação Flutuante (FAB) com Opções -->
+        <div class="fixed bottom-24 right-6 z-40">
+            <div id="fab-options" class="fab-options flex flex-col items-center gap-4 mb-4 scale-0 opacity-0 origin-bottom">
+                 <button data-type="income" class="open-modal-btn bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600">
+                    <i data-lucide="trending-up"></i>
+                </button>
+                <button data-type="expense" class="open-modal-btn bg-red-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600">
+                    <i data-lucide="trending-down"></i>
+                </button>
+            </div>
+            <button id="fab-main-btn" class="bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform">
+                <i data-lucide="plus" class="w-8 h-8 transition-transform"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Navegação Inferior -->
+    <nav class="fixed bottom-0 left-0 right-0 card-bg border-t border-custom h-20 flex justify-around items-center z-50">
+        <button data-view="inicio" class="nav-btn active flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
+            <i data-lucide="home" class="w-6 h-6 mb-1"></i>
+            <span class="text-xs font-semibold">Início</span>
+        </button>
+        <button data-view="transacoes" class="nav-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
+            <i data-lucide="list" class="w-6 h-6 mb-1"></i>
+            <span class="text-xs font-semibold">Transações</span>
+        </button>
+        <button data-view="relatorios" class="nav-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
+            <i data-lucide="pie-chart" class="w-6 h-6 mb-1"></i>
+            <span class="text-xs font-semibold">Relatórios</span>
+        </button>
+        <button data-view="mais" class="nav-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 transition-colors">
+            <i data-lucide="more-horizontal" class="w-6 h-6 mb-1"></i>
+            <span class="text-xs font-semibold">Mais</span>
+        </button>
+    </nav>
+
+    <!-- Modal para Adicionar/Editar Transação -->
+    <div id="transaction-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="card-bg rounded-xl p-6 w-full max-w-md shadow-xl animate-in fade-in-0 zoom-in-95">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-2xl font-bold">Nova Transação</h2>
+                <button id="close-modal-btn" class="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><i data-lucide="x"></i></button>
+            </div>
+            <form id="transaction-form" class="space-y-4">
+                <input type="hidden" id="transaction-id">
+                <input type="hidden" id="transaction-type">
+                <div>
+                    <label for="descricao" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Descrição</label>
+                    <input type="text" id="descricao" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="valor" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Valor (R$)</label>
+                        <input type="number" id="valor" step="0.01" min="0.01" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label for="categoria" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Categoria</label>
+                        <select id="categoria" class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"></select>
+                    </div>
+                </div>
+                <div>
+                    <label for="data" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Data</label>
+                    <input type="date" id="data" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Genérico para Forms Simples -->
+    <div id="simple-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="card-bg rounded-xl p-6 w-full max-w-md shadow-xl animate-in fade-in-0 zoom-in-95">
+             <div id="simple-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Modal para Análise IA -->
+    <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center p-4 z-50">
+        <div class="card-bg rounded-xl p-6 w-full max-w-md shadow-xl animate-in fade-in-0 zoom-in-95">
+             <h2 class="text-2xl font-bold mb-4 text-center flex items-center justify-center gap-2">Análise Financeira <i data-lucide="bot" class="text-blue-500"></i></h2>
+             <div id="ai-content" class="space-y-4 text-sm text-slate-600 dark:text-slate-300"></div>
+             <div class="flex justify-center pt-6">
+                <button id="close-ai-modal" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold">Entendi</button>
+             </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- ESTADO GLOBAL DO APP ---
+        let allExpenses = [];
+        let allIncomes = [];
+        let savingsGoals = [];
+        let budgets = {};
+        let userCategories = { expense: [], income: [] };
+        let currentDate = new Date();
+        let currentView = 'inicio';
+        let activeFilters = { type: 'all', categories: [] };
+        let monthlyChartInstance = null;
+        let annualChartInstance = null;
+        
+        // --- SELETORES DO DOM ---
+        const DOMElements = {
+            appContent: document.getElementById('app-content'),
+            transactionModal: document.getElementById('transaction-modal'),
+            closeModalBtn: document.getElementById('close-modal-btn'),
+            transactionForm: document.getElementById('transaction-form'),
+            navBtns: document.querySelectorAll('.nav-btn'),
+            themeToggle: document.getElementById('theme-toggle'),
+            aiModal: document.getElementById('ai-modal'),
+            closeAiModalBtn: document.getElementById('close-ai-modal'),
+            analyzeBtn: document.getElementById('analyze-btn'),
+            fabMainBtn: document.getElementById('fab-main-btn'),
+            fabOptions: document.getElementById('fab-options'),
+            headerTitle: document.getElementById('header-title'),
+            headerSubtitle: document.getElementById('header-subtitle'),
+            simpleModal: document.getElementById('simple-modal'),
+            simpleModalContent: document.getElementById('simple-modal-content'),
+        };
+
+        // --- DADOS PADRÃO ---
+        const defaultExpenseCategories = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
+        const defaultIncomeCategories = ['Salário', 'Freelance', 'Investimentos', 'Outros'];
+
+        // --- LÓGICA DE DADOS (LOCALSTORAGE) ---
+        const saveData = () => {
+            const appData = {
+                allExpenses,
+                allIncomes,
+                savingsGoals,
+                budgets,
+                userCategories
+            };
+            localStorage.setItem('expenseTrackerData', JSON.stringify(appData));
+        };
+
+        const loadData = () => {
+            const data = JSON.parse(localStorage.getItem('expenseTrackerData'));
+            if (data) {
+                allExpenses = data.allExpenses || [];
+                allIncomes = data.allIncomes || [];
+                savingsGoals = data.savingsGoals || [];
+                budgets = data.budgets || {};
+                userCategories = data.userCategories || { expense: defaultExpenseCategories, income: defaultIncomeCategories };
+            } else {
+                // Primeira vez a usar a app
+                userCategories = { expense: defaultExpenseCategories, income: defaultIncomeCategories };
+            }
+        };
+
+        // --- FUNÇÕES AUXILIARES ---
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const getCategoryInfo = (category, type = 'expense') => {
+            const expenseInfo = { 'Alimentação': { icon: 'utensils-crossed', color: '#ef4444' },'Transporte': { icon: 'car', color: '#3b82f6' },'Moradia': { icon: 'home', color: '#f97316' },'Lazer': { icon: 'ferris-wheel', color: '#14b8a6' },'Saúde': { icon: 'heart-pulse', color: '#8b5cf6' },'Outros': { icon: 'shopping-cart', color: '#a855f7' } };
+            const incomeInfo = { 'Salário': { icon: 'briefcase', color: '#22c55e' },'Freelance': { icon: 'laptop', color: '#10b981' },'Investimentos': { icon: 'area-chart', color: '#06b6d4' },'Outros': { icon: 'gift', color: '#84cc16' } };
+            const infoSet = type === 'income' ? incomeInfo : expenseInfo;
+            return infoSet[category] || { icon: 'dollar-sign', color: '#6b7280' };
+        };
+        
+        // --- LÓGICA DE RENDERIZAÇÃO DAS VISTAS ---
+        const renderView = () => {
+            const viewTitles = {
+                inicio: { title: "Olá!", subtitle: "Aqui está o resumo das suas finanças." },
+                transacoes: { title: "Transações", subtitle: "O seu histórico financeiro detalhado." },
+                relatorios: { title: "Relatórios", subtitle: "Analise os seus padrões de gastos." },
+                mais: { title: "Mais Opções", subtitle: "Personalize a sua experiência." },
+            };
+            DOMElements.headerTitle.textContent = viewTitles[currentView].title;
+            DOMElements.headerSubtitle.textContent = viewTitles[currentView].subtitle;
+
+            switch(currentView) {
+                case 'inicio': renderInicioView(); break;
+                case 'transacoes': renderTransacoesView(); break;
+                case 'relatorios': renderRelatoriosView(); break;
+                case 'mais': renderMaisView(); break;
+            }
+            lucide.createIcons();
+        }
+
+        const renderInicioView = () => {
+            const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(exp.data + 'T12:00:00').getFullYear() === currentDate.getFullYear());
+            const monthlyIncomes = allIncomes.filter(inc => new Date(inc.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(inc.data + 'T12:00:00').getFullYear() === currentDate.getFullYear());
+            const totalExpenses = monthlyExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+            const totalIncomes = monthlyIncomes.reduce((sum, inc) => sum + inc.valor, 0);
+            const balance = totalIncomes - totalExpenses;
+
+            let goalsHTML = '';
+            if (savingsGoals.length > 0) {
+                goalsHTML = `
+                    <div class="card-bg p-6 rounded-2xl shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-600 dark:text-slate-300">Metas de Poupança</h3>
+                            <button id="see-all-goals-btn" class="text-sm font-semibold text-blue-500 hover:underline">Ver todas</button>
+                        </div>
+                        <div class="space-y-4">
+                            ${savingsGoals.slice(0, 2).map(goal => {
+                                const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+                                return `
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <p class="font-semibold text-sm">${goal.name}</p>
+                                            <p class="text-sm text-slate-500">${progress.toFixed(0)}%</p>
+                                        </div>
+                                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full" style="width: ${progress}%"></div></div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            DOMElements.appContent.innerHTML = `
+                <div class="flex items-center justify-between mb-6">
+                    <button id="prev-month" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><i data-lucide="chevron-left"></i></button>
+                    <h2 id="current-month-year" class="text-xl font-bold text-slate-700 dark:text-slate-200">${currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h2>
+                    <button id="next-month" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><i data-lucide="chevron-right"></i></button>
+                </div>
+                <div class="space-y-6">
+                    <div class="card-bg p-6 rounded-2xl shadow-sm text-center">
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Balanço Mensal</p>
+                        <p class="text-4xl font-extrabold mt-2 ${balance >= 0 ? 'text-green-500' : 'text-red-500'}">${formatCurrency(balance)}</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card-bg p-6 rounded-2xl shadow-sm"><div class="flex items-center gap-4"><div class="bg-green-100 dark:bg-green-900/50 p-3 rounded-full"><i data-lucide="arrow-up" class="text-green-500"></i></div><div><p class="text-sm text-slate-500 dark:text-slate-400">Rendimentos</p><p class="font-bold text-slate-700 dark:text-slate-200">${formatCurrency(totalIncomes)}</p></div></div></div>
+                        <div class="card-bg p-6 rounded-2xl shadow-sm"><div class="flex items-center gap-4"><div class="bg-red-100 dark:bg-red-900/50 p-3 rounded-full"><i data-lucide="arrow-down" class="text-red-500"></i></div><div><p class="text-sm text-slate-500 dark:text-slate-400">Despesas</p><p class="font-bold text-slate-700 dark:text-slate-200">${formatCurrency(totalExpenses)}</p></div></div></div>
+                    </div>
+                    ${goalsHTML}
+                </div>
+            `;
+            document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderView(); });
+            document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderView(); });
+            if (savingsGoals.length > 0) {
+                document.getElementById('see-all-goals-btn').addEventListener('click', () => {
+                    document.querySelector('button[data-view="mais"]').click();
+                    setTimeout(renderSavingsGoalsView, 50);
+                });
+            }
+        };
+        
+        const renderTransacoesView = () => {
+            DOMElements.appContent.innerHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <button id="prev-month" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><i data-lucide="chevron-left"></i></button>
+                        <h2 id="current-month-year" class="text-xl font-bold text-slate-700 dark:text-slate-200"></h2>
+                        <button id="next-month" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"><i data-lucide="chevron-right"></i></button>
+                    </div>
+                    <button id="open-filter-btn" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 relative">
+                        <i data-lucide="filter"></i>
+                        <span id="filter-indicator" class="absolute top-0 right-0 block h-2 w-2 rounded-full bg-blue-500 ${activeFilters.type !== 'all' || activeFilters.categories.length > 0 ? '' : 'hidden'}"></span>
+                    </button>
+                </div>
+                <div id="filter-panel" class="card-bg p-4 rounded-xl shadow-sm mb-4 hidden"></div>
+                <div id="transaction-list-container" class="space-y-4"></div>
+            `;
+            document.getElementById('prev-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); activeFilters = { type: 'all', categories: [] }; renderView(); });
+            document.getElementById('next-month').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); activeFilters = { type: 'all', categories: [] }; renderView(); });
+            document.getElementById('open-filter-btn').addEventListener('click', toggleFilterPanel);
+            renderTransactionList();
+        };
+
+        const toggleFilterPanel = () => {
+            const panel = document.getElementById('filter-panel');
+            if (panel.classList.contains('hidden')) {
+                renderFilterPanel();
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        };
+
+        const renderFilterPanel = () => {
+            const panel = document.getElementById('filter-panel');
+            const allCats = [...userCategories.expense, ...userCategories.income];
+            panel.innerHTML = `
+                <div>
+                    <h4 class="font-semibold mb-2 text-sm">Tipo</h4>
+                    <div class="flex gap-2">
+                        <button data-type="all" class="filter-type-btn filter-btn flex-1 text-sm py-2 px-3 rounded-lg border border-custom ${activeFilters.type === 'all' ? 'active' : ''}">Todos</button>
+                        <button data-type="expense" class="filter-type-btn filter-btn flex-1 text-sm py-2 px-3 rounded-lg border border-custom ${activeFilters.type === 'expense' ? 'active' : ''}">Despesas</button>
+                        <button data-type="income" class="filter-type-btn filter-btn flex-1 text-sm py-2 px-3 rounded-lg border border-custom ${activeFilters.type === 'income' ? 'active' : ''}">Rendimentos</button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2 text-sm">Categorias</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        ${[...new Set(allCats)].map(cat => `
+                            <label class="flex items-center gap-2 text-sm p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                                <input type="checkbox" value="${cat}" class="filter-cat-checkbox h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${activeFilters.categories.includes(cat) ? 'checked' : ''}>
+                                ${cat}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            panel.querySelectorAll('.filter-type-btn').forEach(btn => btn.addEventListener('click', e => {
+                activeFilters.type = e.target.dataset.type;
+                renderTransactionList();
+                renderFilterPanel(); // Re-render to update active class
+            }));
+            panel.querySelectorAll('.filter-cat-checkbox').forEach(box => box.addEventListener('change', e => {
+                if (e.target.checked) {
+                    activeFilters.categories.push(e.target.value);
+                } else {
+                    activeFilters.categories = activeFilters.categories.filter(c => c !== e.target.value);
+                }
+                renderTransactionList();
+            }));
+        };
+
+        const renderTransactionList = () => {
+            const container = document.getElementById('transaction-list-container');
+            document.getElementById('current-month-year').textContent = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            
+            const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(exp.data + 'T12:00:00').getFullYear() === currentDate.getFullYear()).map(t => ({...t, type: 'expense'}));
+            const monthlyIncomes = allIncomes.filter(inc => new Date(inc.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(inc.data + 'T12:00:00').getFullYear() === currentDate.getFullYear()).map(t => ({...t, type: 'income'}));
+            let allTransactions = [...monthlyExpenses, ...monthlyIncomes];
+
+            // Apply filters
+            if (activeFilters.type !== 'all') {
+                allTransactions = allTransactions.filter(t => t.type === activeFilters.type);
+            }
+            if (activeFilters.categories.length > 0) {
+                allTransactions = allTransactions.filter(t => activeFilters.categories.includes(t.categoria));
+            }
+            document.getElementById('filter-indicator').classList.toggle('hidden', activeFilters.type === 'all' && activeFilters.categories.length === 0);
+
+            allTransactions.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            if (allTransactions.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-500 p-8 card-bg rounded-xl">Nenhuma transação encontrada com os filtros atuais.</p>`;
+                return;
+            }
+
+            const groupedTransactions = allTransactions.reduce((acc, transaction) => {
+                const date = new Date(transaction.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(transaction);
+                return acc;
+            }, {});
+
+            container.innerHTML = Object.entries(groupedTransactions).map(([date, transactions]) => `
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">${date}</p>
+                    <div class="card-bg rounded-xl shadow-sm p-2 space-y-1">
+                        ${transactions.map(t => {
+                            const { icon, color } = getCategoryInfo(t.categoria, t.type);
+                            const valueColor = t.type === 'income' ? 'text-green-500' : 'text-red-500';
+                            return `
+                            <div class="p-3 rounded-lg flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
+                                <div class="flex items-center gap-4"><div class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full" style="background-color: ${color}20; color: ${color};"><i data-lucide="${icon}" class="w-5 h-5"></i></div><div><p class="font-bold text-sm text-slate-700 dark:text-slate-200">${t.descricao}</p><p class="text-xs text-slate-500">${t.categoria}</p></div></div>
+                                <div class="text-right flex items-center gap-2"><p class="font-semibold text-sm ${valueColor}">${t.type === 'income' ? '+' : '-'} ${formatCurrency(t.valor)}</p><div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"><button data-id="${t.id}" data-type="${t.type}" class="edit-btn text-xs text-slate-400 hover:text-blue-500 p-1"><i data-lucide="pencil" class="w-4 h-4"></i></button><button data-id="${t.id}" data-type="${t.type}" class="delete-btn text-xs text-slate-400 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeleteClick));
+            container.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', handleEditClick));
+            lucide.createIcons();
+        };
+
+        const renderRelatoriosView = () => {
+            const currentMonthExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(exp.data + 'T12:00:00').getFullYear() === currentDate.getFullYear());
+            const currentTotal = currentMonthExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+            const prevMonthDate = new Date(currentDate);
+            prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+            const prevMonthExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === prevMonthDate.getMonth() && new Date(exp.data + 'T12:00:00').getFullYear() === prevMonthDate.getFullYear());
+            const prevTotal = prevMonthExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+            let percentageDiff = prevTotal > 0 ? ((currentTotal - prevTotal) / prevTotal) * 100 : (currentTotal > 0 ? 100 : 0);
+            const diffColor = percentageDiff > 0 ? 'text-red-500' : 'text-green-500';
+            const diffIcon = percentageDiff > 0 ? 'trending-up' : 'trending-down';
+
+            DOMElements.appContent.innerHTML = `
+                 <div class="space-y-6">
+                    <div class="card-bg p-6 rounded-xl shadow-sm"><h3 class="font-bold text-center text-slate-600 dark:text-slate-300 mb-4">Comparação Mensal</h3><div class="text-center"><p class="text-sm text-slate-500">Despesas este mês</p><p class="text-2xl font-bold">${formatCurrency(currentTotal)}</p><div class="flex items-center justify-center gap-2 mt-2 ${diffColor}"><i data-lucide="${diffIcon}" class="w-5 h-5"></i><span class="font-semibold">${percentageDiff.toFixed(1)}% vs. ${prevMonthDate.toLocaleDateString('pt-BR', { month: 'long' })}</span></div></div></div>
+                    <div class="card-bg p-6 rounded-xl shadow-sm"><h3 class="font-bold mb-4 text-center text-slate-600 dark:text-slate-300">Despesas por Categoria (Mês)</h3><div class="h-64 flex items-center justify-center"><canvas id="monthly-chart"></canvas></div></div>
+                    <div class="card-bg p-6 rounded-xl shadow-sm"><h3 class="font-bold mb-4 text-center text-slate-600 dark:text-slate-300">Total de Despesas por Mês (Ano)</h3><div class="h-96"><canvas id="annual-chart"></canvas></div></div>
+                </div>
+            `;
+            updateMonthlyChart();
+            updateAnnualChart();
+        };
+
+        const renderMaisView = () => {
+            DOMElements.appContent.innerHTML = `
+                <div class="space-y-4">
+                    <button id="budgets-btn" class="card-bg p-4 rounded-xl shadow-sm w-full text-left flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><i data-lucide="target" class="text-orange-500"></i><div><p class="font-semibold">Orçamentos Mensais</p><p class="text-sm text-slate-500">Defina limites de gastos por categoria.</p></div></button>
+                    <button id="savings-goals-btn" class="card-bg p-4 rounded-xl shadow-sm w-full text-left flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><i data-lucide="piggy-bank" class="text-green-500"></i><div><p class="font-semibold">Metas de Poupança</p><p class="text-sm text-slate-500">Defina e acompanhe os seus objetivos financeiros.</p></div></button>
+                    <button id="manage-categories-btn" class="card-bg p-4 rounded-xl shadow-sm w-full text-left flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"><i data-lucide="list-checks" class="text-blue-500"></i><div><p class="font-semibold">Gerir Categorias</p><p class="text-sm text-slate-500">Personalize as suas categorias.</p></div></button>
+                </div>
+            `;
+            document.getElementById('budgets-btn').addEventListener('click', renderBudgetsView);
+            document.getElementById('manage-categories-btn').addEventListener('click', renderManageCategoriesView);
+            document.getElementById('savings-goals-btn').addEventListener('click', renderSavingsGoalsView);
+        };
+
+        // --- LÓGICA DE METAS, ORÇAMENTOS, CONTAS E CATEGORIAS ---
+        const renderBudgetsView = () => {
+            DOMElements.headerTitle.textContent = "Orçamentos";
+            DOMElements.headerSubtitle.textContent = `Controle os seus gastos de ${currentDate.toLocaleDateString('pt-BR', { month: 'long' })}`;
+            
+            const yearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            const monthBudgets = budgets[yearMonth] || {};
+            const monthlyExpenses = allExpenses.filter(exp => exp.data.startsWith(yearMonth));
+
+            const totalBudget = Object.values(monthBudgets).reduce((sum, val) => sum + val, 0);
+            const totalSpent = monthlyExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+
+            let budgetsHTML = userCategories.expense.map(cat => {
+                const budget = monthBudgets[cat] || 0;
+                const spent = monthlyExpenses.filter(e => e.categoria === cat).reduce((sum, e) => sum + e.valor, 0);
+                const progress = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+                const progressBarColor = progress > 90 ? 'bg-red-500' : progress > 70 ? 'bg-yellow-500' : 'bg-blue-500';
+
+                return `
+                    <div class="card-bg p-4 rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="font-bold">${cat}</p>
+                            <p class="text-sm text-slate-500">${formatCurrency(spent)} / ${formatCurrency(budget)}</p>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5"><div class="${progressBarColor} h-2.5 rounded-full" style="width: ${progress}%"></div></div>
+                    </div>
+                `;
+            }).join('');
+
+            DOMElements.appContent.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-center">
+                    <div class="card-bg p-4 rounded-xl shadow-sm"><p class="text-sm text-slate-500">Orçamento Total</p><p class="font-bold text-lg">${formatCurrency(totalBudget)}</p></div>
+                    <div class="card-bg p-4 rounded-xl shadow-sm"><p class="text-sm text-slate-500">Total Gasto</p><p class="font-bold text-lg">${formatCurrency(totalSpent)}</p></div>
+                    <div class="card-bg p-4 rounded-xl shadow-sm"><p class="text-sm text-slate-500">Disponível</p><p class="font-bold text-lg">${formatCurrency(totalBudget - totalSpent)}</p></div>
+                </div>
+                <div class="space-y-4">${budgetsHTML}</div>
+                <button id="edit-budgets-btn" class="mt-6 w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"><i data-lucide="edit"></i> Definir Orçamentos</button>
+            `;
+            document.getElementById('edit-budgets-btn').addEventListener('click', handleEditBudgets);
+            lucide.createIcons();
+        };
+
+        const renderSavingsGoalsView = () => {
+            DOMElements.headerTitle.textContent = "Metas de Poupança";
+            DOMElements.headerSubtitle.textContent = "Acompanhe o seu progresso.";
+            let goalsHTML = savingsGoals.map(goal => {
+                const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                return `
+                    <div class="card-bg p-4 rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="font-bold">${goal.name}</p>
+                            <div class="flex gap-2">
+                                <button class="add-contribution-btn p-1 text-slate-500 hover:text-green-500" data-id="${goal.id}"><i data-lucide="plus-circle" class="w-5 h-5"></i></button>
+                                <button class="delete-goal-btn p-1 text-slate-500 hover:text-red-500" data-id="${goal.id}"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-500">${formatCurrency(goal.currentAmount)} de ${formatCurrency(goal.targetAmount)}</p>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mt-2"><div class="bg-green-500 h-2.5 rounded-full" style="width: ${progress}%"></div></div>
+                    </div>
+                `;
+            }).join('');
+
+            DOMElements.appContent.innerHTML = `
+                <div class="space-y-4">${goalsHTML}</div>
+                <button id="add-goal-btn" class="mt-6 w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"><i data-lucide="plus"></i> Adicionar Nova Meta</button>
+            `;
+            document.getElementById('add-goal-btn').addEventListener('click', handleAddGoal);
+            document.querySelectorAll('.add-contribution-btn').forEach(btn => btn.addEventListener('click', handleAddContribution));
+            document.querySelectorAll('.delete-goal-btn').forEach(btn => btn.addEventListener('click', handleDeleteGoal));
+            lucide.createIcons();
+        };
+
+        const renderManageCategoriesView = () => {
+            DOMElements.headerTitle.textContent = "Gerir Categorias";
+            DOMElements.headerSubtitle.textContent = "Adicione, edite ou remova categorias.";
+            const renderCategoryList = (type) => userCategories[type].map(cat => `<div class="flex justify-between items-center p-2 bg-slate-100 dark:bg-slate-800 rounded-lg"><span>${cat}</span><button class="delete-category-btn p-1 text-slate-500 hover:text-red-500" data-type="${type}" data-name="${cat}"><i data-lucide="x" class="w-4 h-4"></i></button></div>`).join('');
+
+            DOMElements.appContent.innerHTML = `
+                <div class="space-y-6">
+                    <div><h3 class="font-bold mb-2">Despesas</h3><div class="space-y-2">${renderCategoryList('expense')}</div><form class="add-category-form mt-2 flex gap-2" data-type="expense"><input type="text" placeholder="Nova categoria..." class="flex-grow input-bg border-custom rounded-lg p-2"><button type="submit" class="bg-blue-500 text-white p-2 rounded-lg"><i data-lucide="plus"></i></button></form></div>
+                    <div><h3 class="font-bold mb-2">Rendimentos</h3><div class="space-y-2">${renderCategoryList('income')}</div><form class="add-category-form mt-2 flex gap-2" data-type="income"><input type="text" placeholder="Nova categoria..." class="flex-grow input-bg border-custom rounded-lg p-2"><button type="submit" class="bg-blue-500 text-white p-2 rounded-lg"><i data-lucide="plus"></i></button></form></div>
+                </div>
+            `;
+            document.querySelectorAll('.add-category-form').forEach(form => form.addEventListener('submit', handleAddCategory));
+            document.querySelectorAll('.delete-category-btn').forEach(btn => btn.addEventListener('click', handleDeleteCategory));
+            lucide.createIcons();
+        };
+        
+        // --- LÓGICA DOS GRÁFICOS ---
+        const updateMonthlyChart = () => {
+            const ctx = document.getElementById('monthly-chart')?.getContext('2d');
+            if (!ctx) return;
+            const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth() && new Date(exp.data + 'T12:00:00').getFullYear() === currentDate.getFullYear());
+            const categoryTotals = monthlyExpenses.reduce((acc, exp) => { acc[exp.categoria] = (acc[exp.categoria] || 0) + exp.valor; return acc; }, {});
+            const labels = Object.keys(categoryTotals);
+            const data = Object.values(categoryTotals);
+            const backgroundColors = labels.map(label => getCategoryInfo(label, 'expense').color);
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+            monthlyChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: backgroundColors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } } });
+        };
+        
+        const updateAnnualChart = () => {
+            const ctx = document.getElementById('annual-chart')?.getContext('2d');
+            if (!ctx) return;
+            const annualExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getFullYear() === currentDate.getFullYear());
+            const monthlyTotals = Array(12).fill(0);
+            annualExpenses.forEach(exp => { monthlyTotals[new Date(exp.data + 'T12:00:00').getMonth()] += exp.valor; });
+            const labels = Array.from({length: 12}, (_, i) => new Date(currentDate.getFullYear(), i).toLocaleDateString('pt-BR', {month: 'short'}));
+            const isDark = document.documentElement.classList.contains('dark');
+            if (annualChartInstance) annualChartInstance.destroy();
+            annualChartInstance = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: `Gastos em ${currentDate.getFullYear()}`, data: monthlyTotals, backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: isDark ? '#334155' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } }, y: { grid: { display: false }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } } }, plugins: { legend: { display: false } } } });
+        };
+
+        // --- LÓGICA DA IA (GEMINI) ---
+        const generateAIAnalysis = async () => {
+            const analyzeBtnIcon = document.getElementById('analyze-btn-icon');
+            const analyzeLoader = document.getElementById('analyze-loader');
+            const aiContent = document.getElementById('ai-content');
+            analyzeBtnIcon.classList.add('hidden');
+            analyzeLoader.classList.remove('hidden');
+            DOMElements.analyzeBtn.disabled = true;
+            const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth());
+            if (monthlyExpenses.length < 3) {
+                aiContent.innerHTML = `<div class="text-center"><i data-lucide="info" class="mx-auto mb-2"></i><p>Adicione pelo menos 3 despesas este mês para uma análise detalhada.</p></div>`;
+                lucide.createIcons();
+            } else {
+                const expensesSummary = monthlyExpenses.map(e => `${e.categoria}: ${formatCurrency(e.valor)}`).join('; ');
+                const total = monthlyExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+                const prompt = `Como um consultor financeiro, analise os seguintes gastos de um usuário no mês, totalizando ${formatCurrency(total)}: ${expensesSummary}. Forneça uma análise curta e objetiva em 2 parágrafos. No primeiro, comente sobre a categoria de maior gasto. No segundo, dê uma dica prática e acionável para ajudar o usuário a economizar no próximo mês, baseada nos gastos apresentados. Use um tom amigável e encorajador. Responda em português do Brasil.`;
+                try {
+                    const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    aiContent.innerHTML = text ? text.replace(/\n/g, '<br>') : "Não foi possível gerar a análise.";
+                } catch (error) {
+                    console.error("Erro na chamada da IA:", error);
+                    aiContent.innerHTML = `<p class="text-center text-red-500">Desculpe, não foi possível gerar a análise no momento.</p>`;
+                }
+            }
+            analyzeBtnIcon.classList.remove('hidden');
+            analyzeLoader.classList.add('hidden');
+            DOMElements.analyzeBtn.disabled = false;
+        };
+        
+        // --- HANDLERS DE EVENTOS ---
+        const handleAIAnalysisClick = () => {
+            DOMElements.aiModal.classList.add('flex');
+            DOMElements.aiModal.classList.remove('hidden');
+            document.getElementById('ai-content').innerHTML = '<div class="flex justify-center"><div class="loader"></div></div>';
+            generateAIAnalysis();
+        };
+        
+        const handleDeleteClick = async (e) => {
+            const button = e.target.closest('.delete-btn');
+            const id = button.dataset.id;
+            const type = button.dataset.type;
+            if (id && type) {
+                if (type === 'income') {
+                    allIncomes = allIncomes.filter(t => t.id !== id);
+                } else {
+                    allExpenses = allExpenses.filter(t => t.id !== id);
+                }
+                saveData();
+                renderView();
+            }
+        };
+
+        const handleEditClick = (e) => {
+            const button = e.target.closest('.edit-btn');
+            const id = button.dataset.id;
+            const type = button.dataset.type;
+            const transaction = type === 'income' ? allIncomes.find(t => t.id === id) : allExpenses.find(t => t.id === id);
+            if (transaction) openTransactionModal(type, transaction);
+        };
+
+        const openTransactionModal = (type, transactionToEdit = null) => {
+            const modalTitle = document.getElementById('modal-title');
+            const typeInput = document.getElementById('transaction-type');
+            const idInput = document.getElementById('transaction-id');
+            const categorySelect = document.getElementById('categoria');
+            
+            const isEditing = transactionToEdit !== null;
+            modalTitle.textContent = isEditing ? (type === 'income' ? 'Editar Rendimento' : 'Editar Despesa') : (type === 'income' ? 'Novo Rendimento' : 'Nova Despesa');
+            typeInput.value = type;
+            idInput.value = isEditing ? transactionToEdit.id : '';
+            
+            const categories = type === 'income' ? userCategories.income : userCategories.expense;
+            categorySelect.innerHTML = categories.map(c => `<option>${c}</option>`).join('');
+
+            if (isEditing) {
+                document.getElementById('descricao').value = transactionToEdit.descricao;
+                document.getElementById('valor').value = transactionToEdit.valor;
+                categorySelect.value = transactionToEdit.categoria;
+                document.getElementById('data').value = transactionToEdit.data;
+            } else {
+                DOMElements.transactionForm.reset();
+                document.getElementById('data').valueAsDate = new Date();
+            }
+            DOMElements.transactionModal.classList.remove('hidden');
+            DOMElements.transactionModal.classList.add('flex');
+        };
+
+        const handleAddCategory = (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const type = form.dataset.type;
+            const input = form.querySelector('input');
+            const newCategory = input.value.trim();
+            if (newCategory && !userCategories[type].includes(newCategory)) {
+                userCategories[type].push(newCategory);
+                saveData();
+                renderManageCategoriesView();
+            }
+            input.value = '';
+        };
+        const handleDeleteCategory = (e) => {
+            const button = e.target.closest('.delete-category-btn');
+            const type = button.dataset.type;
+            const name = button.dataset.name;
+            userCategories[type] = userCategories[type].filter(cat => cat !== name);
+            saveData();
+            renderManageCategoriesView();
+        };
+        const handleAddGoal = () => {
+            DOMElements.simpleModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">Nova Meta</h2><form id="goal-form" class="space-y-4"><input type="text" id="goal-name" placeholder="Nome da Meta (ex: Viagem)" required class="w-full input-bg p-3 rounded-lg"><input type="number" id="goal-target" placeholder="Valor Alvo (R$)" required class="w-full input-bg p-3 rounded-lg"><div class="flex justify-end gap-2 pt-2"><button type="button" id="cancel-simple-modal" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-600">Cancelar</button><button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Salvar</button></div></form>`;
+            DOMElements.simpleModal.classList.add('flex');
+            DOMElements.simpleModal.classList.remove('hidden');
+            document.getElementById('goal-form').addEventListener('submit', e => {
+                e.preventDefault();
+                const name = document.getElementById('goal-name').value.trim();
+                const targetAmount = parseFloat(document.getElementById('goal-target').value);
+                if (name && targetAmount > 0) {
+                    savingsGoals.push({ id: Date.now().toString(), name, targetAmount, currentAmount: 0 });
+                    saveData();
+                    renderSavingsGoalsView();
+                    DOMElements.simpleModal.classList.add('hidden');
+                }
+            });
+            document.getElementById('cancel-simple-modal').addEventListener('click', () => DOMElements.simpleModal.classList.add('hidden'));
+        };
+        const handleAddContribution = (e) => {
+            const id = e.target.closest('.add-contribution-btn').dataset.id;
+            DOMElements.simpleModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">Adicionar Contribuição</h2><form id="contribution-form" class="space-y-4"><input type="number" id="contribution-amount" placeholder="Valor (R$)" required class="w-full input-bg p-3 rounded-lg"><div class="flex justify-end gap-2 pt-2"><button type="button" id="cancel-simple-modal" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-600">Cancelar</button><button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Adicionar</button></div></form>`;
+            DOMElements.simpleModal.classList.add('flex');
+            DOMElements.simpleModal.classList.remove('hidden');
+            document.getElementById('contribution-form').addEventListener('submit', ev => {
+                ev.preventDefault();
+                const amount = parseFloat(document.getElementById('contribution-amount').value);
+                const goal = savingsGoals.find(g => g.id === id);
+                if (amount > 0 && goal) {
+                    goal.currentAmount += amount;
+                    saveData();
+                    renderSavingsGoalsView();
+                    DOMElements.simpleModal.classList.add('hidden');
+                }
+            });
+            document.getElementById('cancel-simple-modal').addEventListener('click', () => DOMElements.simpleModal.classList.add('hidden'));
+        };
+        const handleDeleteGoal = (e) => {
+            const id = e.target.closest('.delete-goal-btn').dataset.id;
+            savingsGoals = savingsGoals.filter(g => g.id !== id);
+            saveData();
+            renderSavingsGoalsView();
+        };
+        const handleEditBudgets = () => {
+            const yearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            const monthBudgets = budgets[yearMonth] || {};
+            const inputsHTML = userCategories.expense.map(cat => `
+                <div class="flex items-center gap-4"><label class="w-1/3">${cat}</label><input type="number" data-category="${cat}" value="${monthBudgets[cat] || 0}" class="budget-input flex-grow input-bg p-2 rounded-lg"></div>
+            `).join('');
+
+            DOMElements.simpleModalContent.innerHTML = `<h2 class="text-2xl font-bold mb-4">Definir Orçamentos</h2><form id="budgets-form" class="space-y-3 max-h-80 overflow-y-auto p-1">${inputsHTML}</form><div class="flex justify-end gap-2 pt-4"><button type="button" id="cancel-simple-modal" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-600">Cancelar</button><button type="button" id="save-budgets-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white">Salvar</button></div>`;
+            DOMElements.simpleModal.classList.add('flex');
+            DOMElements.simpleModal.classList.remove('hidden');
+
+            document.getElementById('save-budgets-btn').addEventListener('click', () => {
+                const newBudgets = {};
+                document.querySelectorAll('.budget-input').forEach(input => {
+                    const value = parseFloat(input.value);
+                    if (value > 0) {
+                        newBudgets[input.dataset.category] = value;
+                    }
+                });
+                budgets[yearMonth] = newBudgets;
+                saveData();
+                renderBudgetsView();
+                DOMElements.simpleModal.classList.add('hidden');
+            });
+            document.getElementById('cancel-simple-modal').addEventListener('click', () => DOMElements.simpleModal.classList.add('hidden'));
+        };
+
+        // --- INICIALIZAÇÃO E EVENT LISTENERS GERAIS ---
+        const setupEventListeners = () => {
+            DOMElements.closeModalBtn.addEventListener('click', () => DOMElements.transactionModal.classList.add('hidden'));
+            DOMElements.transactionForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const type = document.getElementById('transaction-type').value;
+                const id = document.getElementById('transaction-id').value;
+                
+                const transactionData = { 
+                    id: id || Date.now().toString(),
+                    descricao: document.getElementById('descricao').value.trim(), 
+                    valor: parseFloat(document.getElementById('valor').value), 
+                    categoria: document.getElementById('categoria').value, 
+                    data: document.getElementById('data').value 
+                };
+
+                if (id) { // Editing
+                    if (type === 'income') {
+                        allIncomes = allIncomes.map(t => t.id === id ? transactionData : t);
+                    } else {
+                        allExpenses = allExpenses.map(t => t.id === id ? transactionData : t);
+                    }
+                } else { // Adding
+                    if (type === 'income') {
+                        allIncomes.push(transactionData);
+                    } else {
+                        allExpenses.push(transactionData);
+                    }
+                }
+                saveData();
+                renderView();
+                DOMElements.transactionModal.classList.add('hidden');
+            });
+            
+            DOMElements.navBtns.forEach(btn => btn.addEventListener('click', () => {
+                DOMElements.navBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentView = btn.dataset.view;
+                renderView();
+            }));
+
+            const applyTheme = (theme) => {
+                const isDark = theme === 'dark';
+                document.documentElement.classList.toggle('dark', isDark);
+                document.getElementById('theme-icon-light').classList.toggle('hidden', isDark);
+                document.getElementById('theme-icon-dark').classList.toggle('hidden', !isDark);
+                renderView();
+            };
+            DOMElements.themeToggle.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+            applyTheme(localStorage.getItem('theme') || 'dark');
+
+            DOMElements.closeAiModalBtn.addEventListener('click', () => DOMElements.aiModal.classList.add('hidden'));
+            DOMElements.analyzeBtn.addEventListener('click', handleAIAnalysisClick);
+
+            DOMElements.fabMainBtn.addEventListener('click', () => {
+                DOMElements.fabOptions.classList.toggle('scale-0');
+                DOMElements.fabOptions.classList.toggle('opacity-0');
+                if (DOMElements.fabMainBtn.firstElementChild) DOMElements.fabMainBtn.firstElementChild.classList.toggle('rotate-45');
+            });
+            document.querySelectorAll('.open-modal-btn').forEach(btn => btn.addEventListener('click', () => {
+                openTransactionModal(btn.dataset.type);
+                DOMElements.fabOptions.classList.add('scale-0', 'opacity-0');
+                if (DOMElements.fabMainBtn.firstElementChild) DOMElements.fabMainBtn.firstElementChild.classList.remove('rotate-45');
+            }));
+        };
+
+        const initialize = () => {
+            loadData();
+            setupEventListeners();
+            renderView();
+        };
+        
+        initialize();
+
+    </script>
+</body>
+</html>
