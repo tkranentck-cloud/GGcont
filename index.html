@@ -609,39 +609,50 @@
             annualChartInstance = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: `Gastos em ${currentDate.getFullYear()}`, data: monthlyTotals, backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: isDark ? '#334155' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } }, y: { grid: { display: false }, ticks: { color: isDark ? '#94a3b8' : '#64748b' } } }, plugins: { legend: { display: false } } } });
         };
 
-        // --- LÓGICA DA IA (GEMINI) ---
-        const generateAIAnalysis = async () => {
+        // --- LÓGICA DA IA (SIMULADA) ---
+        const generateAIAnalysis = () => {
             const analyzeBtnIcon = document.getElementById('analyze-btn-icon');
             const analyzeLoader = document.getElementById('analyze-loader');
             const aiContent = document.getElementById('ai-content');
+            
             analyzeBtnIcon.classList.add('hidden');
             analyzeLoader.classList.remove('hidden');
             DOMElements.analyzeBtn.disabled = true;
-            const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth());
-            if (monthlyExpenses.length < 3) {
-                aiContent.innerHTML = `<div class="text-center"><i data-lucide="info" class="mx-auto mb-2"></i><p>Adicione pelo menos 3 despesas este mês para uma análise detalhada.</p></div>`;
-                lucide.createIcons();
-            } else {
-                const expensesSummary = monthlyExpenses.map(e => `${e.categoria}: ${formatCurrency(e.valor)}`).join('; ');
-                const total = monthlyExpenses.reduce((sum, exp) => sum + exp.valor, 0);
-                const prompt = `Como um consultor financeiro, analise os seguintes gastos de um usuário no mês, totalizando ${formatCurrency(total)}: ${expensesSummary}. Forneça uma análise curta e objetiva em 2 parágrafos. No primeiro, comente sobre a categoria de maior gasto. No segundo, dê uma dica prática e acionável para ajudar o usuário a economizar no próximo mês, baseada nos gastos apresentados. Use um tom amigável e encorajador. Responda em português do Brasil.`;
-                try {
-                    const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                    const apiKey = "";
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                    const result = await response.json();
-                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                    aiContent.innerHTML = text ? text.replace(/\n/g, '<br>') : "Não foi possível gerar a análise.";
-                } catch (error) {
-                    console.error("Erro na chamada da IA:", error);
-                    aiContent.innerHTML = `<p class="text-center text-red-500">Desculpe, não foi possível gerar a análise no momento.</p>`;
+
+            setTimeout(() => {
+                const monthlyExpenses = allExpenses.filter(exp => new Date(exp.data + 'T12:00:00').getMonth() === currentDate.getMonth());
+                if (monthlyExpenses.length < 3) {
+                    aiContent.innerHTML = `<div class="text-center"><i data-lucide="info" class="mx-auto mb-2"></i><p>Adicione pelo menos 3 despesas este mês para uma análise detalhada.</p></div>`;
+                } else {
+                    const total = monthlyExpenses.reduce((sum, exp) => sum + exp.valor, 0);
+                    const categoryTotals = monthlyExpenses.reduce((acc, exp) => {
+                        acc[exp.categoria] = (acc[exp.categoria] || 0) + exp.valor;
+                        return acc;
+                    }, {});
+                    
+                    const [topCategory, topAmount] = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+                    const topPercentage = ((topAmount / total) * 100).toFixed(0);
+
+                    const tips = [
+                        "Planeje as suas compras de supermercado com uma lista para evitar gastos impulsivos.",
+                        "Tente cozinhar mais em casa. É mais saudável e económico que comer fora.",
+                        "Cancele assinaturas de serviços que não usa com frequência.",
+                        "Compare preços online antes de fazer uma compra maior.",
+                        "Use transporte público ou bicicleta para economizar com combustível e estacionamento."
+                    ];
+                    const randomTip = tips[Math.floor(Math.random() * tips.length)];
+
+                    aiContent.innerHTML = `
+                        <p>Este mês, o seu principal foco de despesas foi em <strong>${topCategory}</strong>, representando <strong>${topPercentage}%</strong> do seu total de gastos.</p>
+                        <p><strong>Dica para poupar:</strong> ${randomTip}</p>
+                    `;
                 }
-            }
-            analyzeBtnIcon.classList.remove('hidden');
-            analyzeLoader.classList.add('hidden');
-            DOMElements.analyzeBtn.disabled = false;
+                
+                analyzeBtnIcon.classList.remove('hidden');
+                analyzeLoader.classList.add('hidden');
+                DOMElements.analyzeBtn.disabled = false;
+                lucide.createIcons();
+            }, 1000); // Simula o tempo de resposta da IA
         };
         
         // --- HANDLERS DE EVENTOS ---
@@ -652,7 +663,7 @@
             generateAIAnalysis();
         };
         
-        const handleDeleteClick = async (e) => {
+        const handleDeleteClick = (e) => {
             const button = e.target.closest('.delete-btn');
             const id = button.dataset.id;
             const type = button.dataset.type;
