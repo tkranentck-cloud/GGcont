@@ -68,10 +68,12 @@
         .category-btn.active {
             background-color: #3b82f6 !important;
             color: white !important;
+            border-color: #3b82f6 !important;
         }
         .dark .category-btn.active {
             background-color: #60a5fa !important;
             color: #0f172a !important;
+            border-color: #60a5fa !important;
         }
     </style>
 </head>
@@ -197,6 +199,14 @@
         </div>
     </div>
 
+    <!-- Modal para Relatório "Wrapped" -->
+    <div id="wrapped-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center p-4 z-50">
+        <div id="wrapped-content" class="relative card-bg rounded-xl p-6 w-full max-w-md shadow-xl text-center h-96 flex flex-col justify-center">
+            <!-- Conteúdo do Wrapped será injetado aqui -->
+        </div>
+        <button id="close-wrapped-modal" class="absolute top-4 right-4 p-2 text-white"><i data-lucide="x"></i></button>
+    </div>
+
 
     <script type="module">
         // --- ESTADO GLOBAL DO APP ---
@@ -228,6 +238,9 @@
             headerSubtitle: document.getElementById('header-subtitle'),
             simpleModal: document.getElementById('simple-modal'),
             simpleModalContent: document.getElementById('simple-modal-content'),
+            wrappedModal: document.getElementById('wrapped-modal'),
+            wrappedContent: document.getElementById('wrapped-content'),
+            closeWrappedModalBtn: document.getElementById('close-wrapped-modal'),
         };
 
         // --- DADOS PADRÃO ---
@@ -737,6 +750,10 @@
                 document.getElementById('descricao').value = transactionToEdit.descricao;
                 document.getElementById('valor').value = transactionToEdit.valor;
                 categoryHiddenInput.value = transactionToEdit.categoria;
+                // Ativa o botão da categoria correta
+                const activeBtn = categoryPicker.querySelector(`[data-category="${transactionToEdit.categoria}"]`);
+                if(activeBtn) activeBtn.classList.add('active');
+
                 document.getElementById('data').value = transactionToEdit.data;
             } else {
                 DOMElements.transactionForm.reset();
@@ -856,7 +873,6 @@
                 };
 
                 if (!transactionData.categoria) {
-                    // Pode adicionar um alerta visual mais elegante aqui
                     alert("Por favor, selecione uma categoria.");
                     return;
                 }
