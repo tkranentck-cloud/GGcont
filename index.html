@@ -65,6 +65,14 @@
             background-color: #60a5fa;
             color: #020617;
         }
+        .category-btn.active {
+            background-color: #3b82f6 !important;
+            color: white !important;
+        }
+        .dark .category-btn.active {
+            background-color: #60a5fa !important;
+            color: #0f172a !important;
+        }
     </style>
 </head>
 <body class="bg-custom text-custom antialiased transition-colors duration-300 pb-24">
@@ -139,20 +147,25 @@
             <form id="transaction-form" class="space-y-4">
                 <input type="hidden" id="transaction-id">
                 <input type="hidden" id="transaction-type">
+                <input type="hidden" id="categoria-hidden">
+                
                 <div>
                     <label for="descricao" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Descrição</label>
                     <input type="text" id="descricao" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
                 </div>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="valor" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Valor (R$)</label>
-                        <input type="number" id="valor" step="0.01" min="0.01" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                    </div>
-                    <div>
-                        <label for="categoria" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Categoria</label>
-                        <select id="categoria" class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"></select>
+                
+                <div>
+                    <label for="valor" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Valor (R$)</label>
+                    <input type="number" id="valor" step="0.01" min="0.01" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-500 dark:text-slate-400">Categoria</label>
+                    <div id="category-picker" class="mt-2 grid grid-cols-4 gap-2">
+                        <!-- Botões de categoria serão injetados aqui -->
                     </div>
                 </div>
+
                 <div>
                     <label for="data" class="block text-sm font-medium text-slate-500 dark:text-slate-400">Data</label>
                     <input type="date" id="data" required class="mt-1 block w-full input-bg border-custom rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
@@ -690,7 +703,8 @@
             const modalTitle = document.getElementById('modal-title');
             const typeInput = document.getElementById('transaction-type');
             const idInput = document.getElementById('transaction-id');
-            const categorySelect = document.getElementById('categoria');
+            const categoryPicker = document.getElementById('category-picker');
+            const categoryHiddenInput = document.getElementById('categoria-hidden');
             
             const isEditing = transactionToEdit !== null;
             modalTitle.textContent = isEditing ? (type === 'income' ? 'Editar Rendimento' : 'Editar Despesa') : (type === 'income' ? 'Novo Rendimento' : 'Nova Despesa');
@@ -698,16 +712,39 @@
             idInput.value = isEditing ? transactionToEdit.id : '';
             
             const categories = type === 'income' ? userCategories.income : userCategories.expense;
-            categorySelect.innerHTML = categories.map(c => `<option>${c}</option>`).join('');
+            
+            categoryPicker.innerHTML = categories.map(cat => {
+                const { icon, color } = getCategoryInfo(cat, type);
+                const isActive = isEditing && transactionToEdit.categoria === cat;
+                return `
+                    <button type="button" data-category="${cat}" class="category-btn flex flex-col items-center justify-center p-2 rounded-lg border border-custom transition-colors ${isActive ? 'active' : ''}" style="${isActive ? '' : `color: ${color}`}">
+                        <i data-lucide="${icon}" class="w-5 h-5"></i>
+                        <span class="text-xs mt-1">${cat}</span>
+                    </button>
+                `;
+            }).join('');
+            lucide.createIcons();
+
+            categoryPicker.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    categoryPicker.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    categoryHiddenInput.value = btn.dataset.category;
+                });
+            });
 
             if (isEditing) {
                 document.getElementById('descricao').value = transactionToEdit.descricao;
                 document.getElementById('valor').value = transactionToEdit.valor;
-                categorySelect.value = transactionToEdit.categoria;
+                categoryHiddenInput.value = transactionToEdit.categoria;
                 document.getElementById('data').value = transactionToEdit.data;
             } else {
                 DOMElements.transactionForm.reset();
                 document.getElementById('data').valueAsDate = new Date();
+                // Select the first category by default
+                if(categoryPicker.firstElementChild){
+                    categoryPicker.firstElementChild.click();
+                }
             }
             DOMElements.transactionModal.classList.remove('hidden');
             DOMElements.transactionModal.classList.add('flex');
@@ -814,9 +851,15 @@
                     id: id || Date.now().toString(),
                     descricao: document.getElementById('descricao').value.trim(), 
                     valor: parseFloat(document.getElementById('valor').value), 
-                    categoria: document.getElementById('categoria').value, 
+                    categoria: document.getElementById('categoria-hidden').value, 
                     data: document.getElementById('data').value 
                 };
+
+                if (!transactionData.categoria) {
+                    // Pode adicionar um alerta visual mais elegante aqui
+                    alert("Por favor, selecione uma categoria.");
+                    return;
+                }
 
                 if (id) { // Editing
                     if (type === 'income') {
